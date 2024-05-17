@@ -7,7 +7,7 @@
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto">
         <li class="nav-item d-flex">
-          <a class="nav-link logout-btn" href="../logout.php"> <img src="../img/Logout.png" alt="Logo" width="28" height="28">
+          <a class="nav-link logout-btn text-white fw-800" href="../logout.php"> <img src="../img/Logout.png" alt="Logo" width="28" height="28">
             LOGOUT</a>
         </li>
       </ul>

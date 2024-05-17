@@ -1,3 +1,51 @@
+<?php
+session_start();
+
+// Konfigurasi database
+$host = 'localhost';
+$username = 'root';
+$password = 'rizki121';
+$database = 'employees_db';
+
+// Membuat koneksi ke database
+$koneksi = mysqli_connect($host, $username, $password, $database);
+
+if (!$koneksi) {
+    die("Koneksi gagal: " . mysqli_connect_error());
+}
+
+// Ambil ID pengguna dari sesi (sesuaikan dengan implementasi Anda)
+$user_id = $_SESSION['user_id'];
+
+// Ambil data pengguna dari database
+$query = "SELECT * FROM users WHERE id = ?";
+$stmt = $koneksi->prepare($query);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+// Proses pembaruan data
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $nama_lengkap = $_POST['namaLengkap'];
+    $email = $_POST['email'];
+
+    // Update data pengguna di database
+    $update_query = "UPDATE users SET name = ?, email = ? WHERE id = ?";
+    $stmt = $koneksi->prepare($update_query);
+    $stmt->bind_param("ssi", $nama_lengkap, $email, $user_id); // Ubah "ssssi" menjadi "ssi"
+    if ($stmt->execute()) {
+        // Jika berhasil, refresh halaman untuk memuat data terbaru
+        header("Location: profil.php");
+        exit();
+    } else {
+        echo "Gagal memperbarui data: " . $stmt->error;
+    }
+}
+
+include 'header.php';
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,98 +54,25 @@
   <title>Profil</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-  <?php include 'header.php'; ?>
-
-<!-- Start Popup 1 -->
-<div id="ubahDataPopup" class="modal fade" tabindex="-1" aria-labelledby="ubahDataPopupLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title justify-content-center fw-bold">UBAH DATA PROFIL</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form>
-          <div class="mb-3">
-            <label for="namaLengkap" class="form-label">Nama Lengkap</label>
-            <input type="text" class="form-control" id="namaLengkap">
-          </div>
-          <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email">
-          </div>
-          <div class="mb-3">
-            <label for="noHandphone" class="form-label">No Handphone</label>
-            <input type="text" class="form-control" id="noHandphone">
-          </div>
-          <div class="mb-3">
-            <label for="ekstrakulikuler" class="form-label">Level/Ekstrakulikuler</label>
-            <input type="text" class="form-control" id="ekstrakulikuler">
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Kembali</button>
-        <button type="button" class="btn btn-primary"  data-bs-toggle="modal" data-bs-target="#dataDisimpan">Simpan</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Finish Popup -->
-
-<!-- Start Popup 2 -->
-<div id="dataDisimpan" class="modal fade" tabindex="-1" aria-labelledby="data DisimpanLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold">BERHASIL!</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-center">Data anda telah diubah</p>
-      </div>
-      <div class="modal-footer">
-        <a href="profil.php" type="button" class="btn btn-primary" style="background-color: #007F73;">Selesai</a>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- Finish Popup 2 -->
-
-
+</head>
+<body>
 <!-- Start Content -->
-
 <div class="content">
-  <div class="container justify-content-center ">
+  <div class="container justify-content-center">
     <div class="row justify-content-center">
       <div class="col-md-6">
         <div class="profile-card">
-          <div class="text-center">
-          <img src="../img/profil.png" alt="Profil" class="profile-img" style="width:120px; height:160px;">
-          </div>
+          
           <div class="form-label mb-2 mx-3" style="color: black;">
             Nama Lengkap
             <div class="card mb-3 p-2">
-              <p class="card-text">Joni</p>
+              <p class="card-text"><?= htmlspecialchars($user['name']) ?></p>
             </div>
           </div>
           <div class="form-label mb-2 mx-3" style="color: black;">
             Email
             <div class="card mb-3 p-2">
-              <p class="card-text">jon@example.com</p>
-            </div>
-          </div>
-          <div class="form-label mb-2 mx-3" style="color: black;">
-            No Handphone
-            <div class="card mb-3 p-2">
-              <p class="card-text">0836265437636</p>
-            </div>
-          </div>
-          <div class="form-label mb-2 mx-3" style="color: black;">
-            Jabatan Extrakulikuler
-            <div class="card mb-3 p-2">
-              <p class="card-text">Anggota Pramuka</p>
+              <p class="card-text"><?= htmlspecialchars($user['email']) ?></p>
             </div>
           </div>
           <div class="card border-0 mb-2 mx-3">
@@ -108,53 +83,43 @@
       </div>
     </div>
   </div>
-
+</div>
 <!-- Finish Content -->
 
-<!-- Start Popup 1 -->
-<div id="opsiPengajuan" class="modal fade" tabindex="-1" aria-labelledby="dataDisimpan" aria-hidden="true">
+<!-- Start Popup Ubah Data -->
+<div id="ubahDataPopup" class="modal fade" tabindex="-1" aria-labelledby="ubahDataPopupLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <div class="col-md-3"></div>
-        <h5 class="modal-title justify-content-between fw-bold col-md-6 text-center">Tanggapi Pengajuan</h5>
+        <h5 class="modal-title justify-content-center fw-bold">UBAH DATA PROFIL</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-      <p class="text-center my-5">Apakah disetujui sebagai anggota?</p>
+        <form method="post">
+          <div class="mb-3">
+            <label for="namaLengkap" class="form-label">Nama Lengkap</label>
+            <input type="text" class="form-control" id="namaLengkap" name="namaLengkap" value="<?= htmlspecialchars($user['name']) ?>">
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" value="<?= htmlspecialchars($user['email']) ?>">
+          </div>
+          <button type="submit" class="btn btn-primary">Simpan</button>
+        </form>
       </div>
-      <div class="modal-footer d-flex">
-        <button type="button" class="btn btn-danger me-3" data-bs-dismiss="modal">Tidak</button>
-        <button type="submit" class="btn btn-primary px-4 mx-3" style="background-color: #007F73;" data-bs-toggle="modal" data-bs-target="#dataDisimpan">Ya</button>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Kembali</button>
       </div>
     </div>
   </div>
 </div>
-
-<!-- Finish Popup 1-->
-
-
+<!-- Finish Popup Ubah Data -->
 
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Script -->
-<script>
-  // Ambil semua elemen dropdown item
-  const dropdownItems = document.querySelectorAll('.dropdown-item');
-
-  // Loop melalui setiap item dropdown
-  dropdownItems.forEach(item => {
-    // Tambahkan event listener ketika item dropdown diklik
-    item.addEventListener('click', function() {
-      // Ambil teks dari item dropdown yang dipilih
-      const selectedText = this.textContent;
-      
-      // Ubah teks dropdown Ekstrakulikuler sesuai dengan teks yang dipilih
-      document.querySelector('.dropdown-toggle').textContent = selectedText;
-    });
-  });
-</script>
-
 </body>
 </html>
+
+<?php
+mysqli_close($koneksi);
+?>

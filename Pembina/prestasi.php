@@ -1,3 +1,53 @@
+<?php
+session_start();
+
+// Pastikan user sudah login
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$host = 'localhost';
+$username = 'root';
+$password = 'rizki121';
+$database = 'employees_db';
+
+$koneksi = mysqli_connect($host, $username, $password, $database);
+
+if (!$koneksi) {
+    die("Koneksi gagal: " . mysqli_connect_error());
+}
+
+$user_id = $_SESSION['user_id'];
+
+// Ambil ekskul_id pembina
+$query_ekskul = "
+    SELECT e.id AS ekskul_id, e.nama AS nama_ekskul 
+    FROM tb_ekstrakulikuler e
+    JOIN tb_pembina p ON e.pembina_id = p.id
+    WHERE p.user_id = ?";
+$stmt_ekskul = $koneksi->prepare($query_ekskul);
+$stmt_ekskul->bind_param("i", $user_id);
+$stmt_ekskul->execute();
+$result_ekskul = $stmt_ekskul->get_result();
+$ekskul = $result_ekskul->fetch_assoc();
+
+$ekskul_id = $ekskul['ekskul_id'];
+
+// Ambil data anggota dari tabel berdasarkan ekskul_id
+$query_anggota = "
+    SELECT a.id, a.nama, a.kelas, a.jurusan, a.jenis_kelamin, a.email 
+    FROM tb_anggota a
+    WHERE a.ekskul_id = ?";
+$stmt_anggota = $koneksi->prepare($query_anggota);
+$stmt_anggota->bind_param("i", $ekskul_id);
+$stmt_anggota->execute();
+$result_anggota = $stmt_anggota->get_result();
+$anggota = $result_anggota->fetch_all(MYSQLI_ASSOC);
+
+include 'header.php';
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,90 +56,71 @@
   <title>Profil</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <?php include 'app.php'; ?>
-
+</head>
+<body>
 <!-- Start Content -->
 <div class="content">
-  <div class="container justify-content-center ">
+  <div class="container justify-content-center">
     <div class="row justify-content-center">
       <div class="col-md-12">
         <div class="profile-card" style="background-color: #A6A6A6;">
-          <div class="container" style="background-color: #D9D9D9;"> 
-                  <!--Start Tabel prestasi -->
-            <div class="container p-4" >
-              <h2 class="modal-title justify-content-center fw-bold mb-4" >PRESTASI</h2>
+          <div class="container" style="background-color: #D9D9D9;">
+            <!-- Start Tabel anggota -->
+            <div class="container p-4">
+              <h2 class="modal-title justify-content-center fw-bold mb-4">ANGGOTA EKSKUL <?= htmlspecialchars($ekskul['nama_ekskul']) ?></h2>
               <table class="table table-bordered" style="background-color: #FFFFFF; border: 2px;">
                 <thead>
                   <tr style="background-color: #FFF455; text-align: center;">
                     <th scope="col">No</th>
-                    <th scope="col">Nama Ekskul</th>
-                    <th scope="col">Nama Anggota</th>
+                    <th scope="col">Nama</th>
                     <th scope="col">Kelas</th>
                     <th scope="col">Jurusan</th>
                     <th scope="col">Jenis Kelamin</th>
-                    <th scope="col">Persetujuan</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Prestasi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <th scope="row">1</th>
-                    <td>Pramuka</td>
-                    <td>Andriana</td>
-                    <td>11</td>
-                    <td>TBSM</td>
-                    <td>Pria</td>
-                    <td>
-                      <div class="container d-flex justify-content-center align-items-center">            
-                         <a class="btn" style="background-color: #0094FF; color: #ffffff; border-radius: 7px;" data-bs-toggle="modal" data-bs-target="#ubahDataPopup">
-                          LIHAT PRESTASI</a>
-                      </div>
-                    </td>
-                    
-                  </tr>
-                  <tr>
-                    <th scope="row">2</th>
-                    <td>Pramuka</td>
-                    <td>Diana</td>
-                    <td>10</td>
-                    <td>APAT</td>
-                    <td>Wanita</td>
-                    <td>
-                      <div class="container d-flex justify-content-center align-items-center">            
-                         <a href="#" class="btn" style="background-color: #0094FF; color: #ffffff; border-radius: 7px;" data-bs-toggle="modal" data-bs-target="#ubahDataPopup">
-                         LIHAT PRESTASI</a>
-                      </div>
-                    
-                  </tr>
-                  
+                  <?php foreach ($anggota as $index => $item): ?>
+                    <tr>
+                      <th scope="row"><?= $index + 1 ?></th>
+                      <td><?= htmlspecialchars($item['nama']) ?></td>
+                      <td><?= htmlspecialchars($item['kelas']) ?></td>
+                      <td><?= htmlspecialchars($item['jurusan']) ?></td>
+                      <td><?= htmlspecialchars($item['jenis_kelamin']) ?></td>
+                      <td><?= htmlspecialchars($item['email']) ?></td>
+                      <td>
+                        <div class="container d-flex justify-content-center align-items-center">
+                          <a href="#" class="btn" style="background-color: #0094FF; color: #ffffff; border-radius: 7px;" data-bs-toggle="modal" data-bs-target="#ubahDataPopup" data-anggota-id="<?= $item['id'] ?>" data-nama="<?= $item['nama'] ?>" data-jenis-kelamin="<?= $item['jenis_kelamin'] ?>" data-jurusan="<?= $item['jurusan'] ?>" data-ekskul="<?= $ekskul['nama_ekskul'] ?>">
+                            LIHAT PRESTASI
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
                 </tbody>
-              </table>      
-              </div>
-            <!--Finish Tabel prestasi -->
-          </div>
-            <div class="modal-footer">
-              <a href="anggotaNilai.php" class="btn px-4 mt-4" style="background-color: #007F73; color: #ffffff; border-radius: 7px;">
-               Lihat Anggota</a>
+              </table>
             </div>
-           
+            <!--Finish Tabel anggota -->
+          </div>
+          <div class="modal-footer">
+            <a href="anggotaNilai.php" class="btn px-4 mt-4" style="background-color: #007F73; color: #ffffff; border-radius: 7px;">Lihat Anggota</a>
+          </div>
         </div>
       </div>
-    </div> 
-  </div>      
-</div>      
+    </div>
+  </div>
+</div>
 <!-- Finish Content -->
 
-<!-- Start Popup 1 -->
+<!-- Start Popup Prestasi -->
 <div id="ubahDataPopup" class="modal fade" tabindex="-1" aria-labelledby="ubahDataPopupLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
     <div class="modal-content p-3">
       <div class="modal-header">
-        <div class="col-md-3"></div>
-        <h5 class="modal-title justify-content-center fw-bold col-md-6">PRESTASI</h5>
-        <button type="button" class="btn-close col-md-3" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title justify-content-center fw-bold">PRESTASI</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      
-      <!-- start content -->
       <div class="d-flex justify-content-center">
         <div class="col-md-4 m-2 p-6">
           <div class="container">
@@ -107,28 +138,28 @@
               <tr>
                 <td>Nama</td>
                 <td>:</td>
-                <td>Andriana</td>
+                <td id="detailNama"></td>
               </tr>
               <tr>
                 <td>Jenis Kelamin</td>
                 <td>:</td>
-                <td>Pria</td>
+                <td id="detailJenisKelamin"></td>
               </tr>
               <tr>
                 <td>Jurusan</td>
                 <td>:</td>
-                <td>TBSM</td>
+                <td id="detailJurusan"></td>
               </tr>
               <tr>
-                <td>Ekstrakulikuler</td>
+                <td>Ekstrakurikuler</td>
                 <td>:</td>
-                <td>Pramuka</td>
+                <td id="detailEkskul"></td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-      <!--Start Tabel prestasi -->
+      <!-- Start Tabel prestasi -->
       <div class="container p-4">
         <table class="table table-bordered border-2" style="background-color: #FFF455; border: 2px;">
           <thead>
@@ -137,182 +168,180 @@
               <th scope="col">Kegiatan</th>
               <th scope="col">Tanggal</th>
               <th scope="col">Tingkat</th>
-              <th scope="col">Dskripsi</th>
+              <th scope="col">Deskripsi</th>
               <th scope="col">Edit</th>
               <th scope="col">Hapus</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <th scope="row">1</th>
-              <td>Pionering</td>
-              <td>27/4/2024</td>
-              <td>Kabupaten</td>
-              <td>Meraih juara 1 dalam Lomba Pionering Tingkat Kabupaten dengan membangun jembatan gantung yang kuat dan inovatif menggunakan bahan-bahan alami. </td>
-              <td>
-                <div class="container d-flex justify-content-center align-items-center">           
-                    <a href="#" class="btn" style="background-color: #FFC700; color: #ffffff; border-radius: 7px;" data-bs-toggle="modal" data-bs-target="#ubah">
-                    <img src="../img/editPutih.png" alt="img-edit" width="18" height="20"></a>
-                </div>
-              </td>
-              <td>
-                  <div class="container d-flex justify-content-center align-items-center">            
-                      <a href="#" class="btn" style="background-color: #AF0B00; color: #ffffff; border-radius: 7px;" data-bs-toggle="modal" data-bs-target="#hapus">
-                      <img src="../img/hapus.png" alt="img-edit" width="18" height="20"></a>
-                  </div>
-                </td>
-            </tr>
-
+          <tbody id="prestasiTableBody">
           </tbody>
-          <div class="modal-footer">
-              <button class="btn btn-primary border-0 px-4 m-3" style="background-color: #009521; border-radius: 7px;" data-bs-toggle="modal" data-bs-target="#tambahkan">
-                <b>Tambahkan</b>
-              </button>
-            </div> 
-        </table>      
+        </table>
       </div>
-      <!--Finish Tabel prestasi -->
-      <!-- finish content -->
+      <!-- Finish Tabel prestasi -->
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" style="background-color: #007F73;" data-bs-dismiss="modal">Selesai</button>
+        <button type="button" class="btn btn-primary" style="background-color: #009521;" data-bs-toggle="modal" data-bs-target="#tambahkanPrestasiModal">Tambahkan Prestasi</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Selesai</button>
       </div>
     </div>
   </div>
 </div>
-<!-- Finish Popup -->
+<!-- Finish Popup Prestasi -->
 
-<!-- Start Popup 2 -->
-<div id="tambahkan" class="modal fade" tabindex="-1" aria-labelledby="dataDisimpan" aria-hidden="true">
+<!-- Start Popup Tambahkan Prestasi -->
+<div id="tambahkanPrestasiModal" class="modal fade" tabindex="-1" aria-labelledby="tambahkanPrestasiModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
     <div class="modal-content px-4">
       <div class="modal-header">
-        <div class="col-md-3"></div>
-        <h5 class="modal-title justify-content-between fw-bold col-lg-8 text-center">TAMBAHKAN PRESTASI</h5>
+        <h5 class="modal-title fw-bold">Tambahkan Prestasi</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <form>
+      <form id="formTambahPrestasi" action="tambah_prestasi.php" method="post">
+        <div class="modal-body">
+          <input type="hidden" name="anggota_id" id="tambahAnggotaId">
           <div class="mb-3">
-            <label for="namaEkskul" class="form-label">Kegiatan</label>
-            <input type="text" class="form-control" id="namaEkskul">
+            <label for="kegiatan" class="form-label">Kegiatan</label>
+            <input type="text" class="form-control" name="kegiatan" id="kegiatan" required>
           </div>
           <div class="mb-3">
-            <label for="nama" class="form-label">Tanggal</label>
-            <input type="date" class="form-control" id="anggota">
+            <label for="tanggal" class="form-label">Tanggal</label>
+            <input type="date" class="form-control" name="tanggal" id="tanggal" required>
           </div>
           <div class="mb-3">
             <label for="tingkat" class="form-label">Tingkat</label>
-            <input type="text" class="form-control" id="anggota">
+            <input type="text" class="form-control" name="tingkat" id="tingkat" required>
           </div>
           <div class="mb-3">
-            <label for="kelas" class="form-label">Deskripsi</label>
-            <textarea class="form-control" placeholder="ketik deskripsi kegiatan disini" id="floatingTextarea2" style="height: 200px"></textarea>
+            <label for="deskripsi" class="form-label">Deskripsi</label>
+            <textarea class="form-control" name="deskripsi" id="deskripsi" required></textarea>
           </div>
-          <div class="modal-footer d-flex">
-            <button type="button" class="btn btn-danger me-3" data-bs-dismiss="modal">Kembali</button>
-            <button type="button" class="btn btn-primary px-4 mx-3" style="background-color: #007F73;"  data-bs-toggle="modal" data-bs-target="#konfirmasiModal1">Simpan</button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Simpan</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
-<!-- Finish Popup 2 -->
-<!-- Start Popup 2 -->
-<div id="ubah" class="modal fade" tabindex="-1" aria-labelledby="dataDisimpan" aria-hidden="true">
+<!-- Finish Popup Tambahkan Prestasi -->
+
+<!-- Start Popup Edit Prestasi -->
+<div id="editPrestasiModal" class="modal fade" tabindex="-1" aria-labelledby="editPrestasiModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
     <div class="modal-content px-4">
       <div class="modal-header">
-        <div class="col-md-3"></div>
-        <h5 class="modal-title justify-content-between fw-bold col-lg-8 text-center">UBAH PRESTASI</h5>
+        <h5 class="modal-title fw-bold">Edit Prestasi</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <form>
+      <form id="formEditPrestasi" action="update_prestasi.php" method="post">
+        <div class="modal-body">
+          <input type="hidden" name="id" id="editPrestasiId">
           <div class="mb-3">
-            <label for="namaEkskul" class="form-label">Kegiatan</label>
-            <input type="text" class="form-control" id="namaEkskul">
-          </div>
-          <div class="mb-3">
-            <label for="nama" class="form-label">Tanggal</label>
-            <input type="date" class="form-control" id="anggota">
+            <label for="editKegiatan" class="form-label">Kegiatan</label>
+            <input type="text" class="form-control" name="kegiatan" id="editKegiatan" required>
           </div>
           <div class="mb-3">
-            <label for="tingkat" class="form-label">Tingkat</label>
-            <input type="text" class="form-control" id="anggota">
+            <label for="editTanggal" class="form-label">Tanggal</label>
+            <input type="date" class="form-control" name="tanggal" id="editTanggal" required>
           </div>
           <div class="mb-3">
-            <label for="kelas" class="form-label">Deskripsi</label>
-            <textarea class="form-control" placeholder="ketik deskripsi kegiatan disini" id="floatingTextarea2" style="height: 200px"></textarea>
+            <label for="editTingkat" class="form-label">Tingkat</label>
+            <input type="text" class="form-control" name="tingkat" id="editTingkat" required>
           </div>
-          <div class="modal-footer d-flex">
-            <button type="button" class="btn btn-danger me-3" data-bs-dismiss="modal">Kembali</button>
-            <button type="button" class="btn btn-primary px-4 mx-3" style="background-color: #007F73;" data-bs-toggle="modal" data-bs-target="#konfirmasiModal">Simpan</button>
+          <div class="mb-3">
+            <label for="editDeskripsi" class="form-label">Deskripsi</label>
+            <textarea class="form-control" name="deskripsi" id="editDeskripsi" required></textarea>
           </div>
-        </form>
-      </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Simpan</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
-<!-- Finish Popup 2 -->
+<!-- Finish Popup Edit Prestasi -->
 
-<!-- Start Popup 2 -->
-<div id="konfirmasiModal1" class="modal fade" tabindex="-1" aria-labelledby="konfirmasiModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title text-center" id="konfirmasiModalLabel">Konfirmasi</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center my-5">
-        Apakah Anda yakin ingin menambahkan kegiatan ini?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Tidak</button>
-        <a href="prestasi.php" type="submit" class="btn btn-primary px-4 mx-3" style="background-color: #007F73;">Ya</a>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- Finish Popup 2 -->
-<!-- Start Popup 2 -->
-<div id="konfirmasiModal" class="modal fade" tabindex="-1" aria-labelledby="konfirmasiModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title text-center" id="konfirmasiModalLabel">Konfirmasi</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center my-5">
-        Apakah Anda yakin ingin menyimpan perubahan?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Tidak</button>
-        <a href="prestasi.php" type="submit" class="btn btn-primary px-4 mx-3" style="background-color: #007F73;">Ya</a>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- Finish Popup 2 -->
-<!-- Start Popup 2 -->
-<div id="hapus" class="modal fade" tabindex="-1" aria-labelledby="konfirmasiModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title text-center" id="konfirmasiModalLabel">Konfirmasi</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center my-5">
-        Apakah Anda yakin ingin menghapus ini?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Tidak</button>
-        <a href="prestasi.php" type="submit" class="btn btn-primary px-4 mx-3" style="background-color: #007F73;">Ya</a>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- Finish Popup 2 -->
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
 
+<script>
+$(document).ready(function() {
+    $('#ubahDataPopup').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var anggotaId = button.data('anggota-id');
+        var nama = button.data('nama');
+        var jenisKelamin = button.data('jenis-kelamin');
+        var jurusan = button.data('jurusan');
+        var ekskul = button.data('ekskul');
+
+        var modal = $(this);
+        modal.find('#detailNama').text(nama);
+        modal.find('#detailJenisKelamin').text(jenisKelamin);
+        modal.find('#detailJurusan').text(jurusan);
+        modal.find('#detailEkskul').text(ekskul);
+
+        $.ajax({
+            url: 'ambil_prestasi.php',
+            type: 'GET',
+            data: { anggota_id: anggotaId },
+            dataType: 'json',
+            success: function(data) {
+                var prestasiTableBody = $('#prestasiTableBody');
+                prestasiTableBody.empty();
+
+                $.each(data, function(index, prestasi) {
+                    var row = '<tr>' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td>' + prestasi.kegiatan + '</td>' +
+                        '<td>' + prestasi.tanggal + '</td>' +
+                        '<td>' + prestasi.tingkat + '</td>' +
+                        '<td>' + prestasi.deskripsi + '</td>' +
+                        '<td><button class="btn btn-warning edit-prestasi" data-id="' + prestasi.id + '" data-kegiatan="' + prestasi.kegiatan + '" data-tanggal="' + prestasi.tanggal + '" data-tingkat="' + prestasi.tingkat + '" data-deskripsi="' + prestasi.deskripsi + '">Edit</button></td>' +
+                        '<td><button class="btn btn-danger delete-prestasi" data-id="' + prestasi.id + '">Hapus</button></td>' +
+                    '</tr>';
+                    prestasiTableBody.append(row);
+                });
+            }
+        });
+    });
+
+    $('#prestasiTableBody').on('click', '.edit-prestasi', function() {
+        var id = $(this).data('id');
+        var kegiatan = $(this).data('kegiatan');
+        var tanggal = $(this).data('tanggal');
+        var tingkat = $(this).data('tingkat');
+        var deskripsi = $(this).data('deskripsi');
+
+        $('#editPrestasiId').val(id);
+        $('#editKegiatan').val(kegiatan);
+        $('#editTanggal').val(tanggal);
+        $('#editTingkat').val(tingkat);
+        $('#editDeskripsi').val(deskripsi);
+
+        $('#editPrestasiModal').modal('show');
+    });
+
+    $('#prestasiTableBody').on('click', '.delete-prestasi', function() {
+        var id = $(this).data('id');
+        if (confirm('Apakah anda yakin ingin menghapus prestasi ini?')) {
+            window.location.href = 'delete_prestasi.php?id=' + id;
+        }
+    });
+
+    $('#ubahDataPopup').on('hidden.bs.modal', function () {
+        $('#prestasiTableBody').empty();
+    });
+
+    $('#tambahkanPrestasiModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var anggotaId = button.closest('#ubahDataPopup').find('#detailNama').text();
+        $('#tambahAnggotaId').val(anggotaId);
+    });
+});
+</script>
 </body>
 </html>
